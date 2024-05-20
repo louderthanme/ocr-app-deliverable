@@ -1,4 +1,4 @@
-'use client';
+'use client'
 import { useState } from "react";
 
 export default function Home() {
@@ -25,24 +25,39 @@ export default function Home() {
       body: formData,
     });
 
-    const uploadResult = await uploadResponse.json();
-    console.log('Upload result:', uploadResult); // Debugging log
+    const { fileUrl } = await uploadResponse.json();
 
-    if (!uploadResult.fileUrl) {
-      console.error('Upload failed, no fileUrl returned');
-      return;
+    // Determine file type based on extension
+    const fileType = file.name.split('.').pop()?.toLowerCase();
+    const isImage = ["jpg", "jpeg", "png", "bmp", "gif", "tiff", "webp"].includes(fileType || "");
+    const isPdfOrTiff = ["pdf", "tiff"].includes(fileType || "");
+
+    if (isImage) {
+      const ocrResponse = await fetch("/api/ocr/image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileUrl }),
+      });
+
+      const { text } = await ocrResponse.json();
+      setOcrResult(text);
+    } else if (isPdfOrTiff) {
+      const ocrResponse = await fetch("/api/ocr/pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileUrl }),
+      });
+
+      const { operationName } = await ocrResponse.json();
+      // You would need to implement logic to poll the operation status and retrieve the result.
+      console.log("Operation Name:", operationName);
+    } else {
+      console.error("Unsupported file type.");
     }
-
-    const ocrResponse = await fetch("/api/ocr", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ fileUrl: uploadResult.fileUrl }),
-    });
-
-    const { text } = await ocrResponse.json();
-    setOcrResult(text);
   };
 
   return (
