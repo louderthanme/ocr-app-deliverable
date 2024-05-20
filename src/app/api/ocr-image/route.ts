@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("fileUrl:", fileUrl);
 
     const request = {
       image: {
@@ -28,7 +27,6 @@ export async function POST(req: NextRequest) {
       imageContext: { languageHints: ["en"] },
     };
 
-    console.log("request:", request);
 
     const [result] = await client.annotateImage(request);
     const detections = result.textAnnotations;

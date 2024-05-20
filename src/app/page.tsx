@@ -1,4 +1,4 @@
-'use client'
+'use client';
 import { useState } from "react";
 
 export default function Home() {
@@ -27,13 +27,12 @@ export default function Home() {
 
     const { fileUrl } = await uploadResponse.json();
 
-    // Determine file type based on extension
     const fileType = file.name.split('.').pop()?.toLowerCase();
-    const isImage = ["jpg", "jpeg", "png", "bmp", "gif", "tiff", "webp"].includes(fileType || "");
+    const isImage = ["jpg", "jpeg", "png", "bmp", "gif", "webp"].includes(fileType || "");
     const isPdfOrTiff = ["pdf", "tiff"].includes(fileType || "");
 
     if (isImage) {
-      const ocrResponse = await fetch("/api/ocr/image", {
+      const ocrResponse = await fetch("/api/ocr-image", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -44,17 +43,39 @@ export default function Home() {
       const { text } = await ocrResponse.json();
       setOcrResult(text);
     } else if (isPdfOrTiff) {
-      const ocrResponse = await fetch("/api/ocr/pdf", {
+      const ocrResponse = await fetch("/api/ocr-pdf-tiff", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ fileUrl }),
+        body: JSON.stringify({ fileUrl, mimeType: `application/${fileType}` }),
       });
 
-      const { operationName } = await ocrResponse.json();
-      // You would need to implement logic to poll the operation status and retrieve the result.
-      console.log("Operation Name:", operationName);
+      const { operationName, uniqueId } = await ocrResponse.json();
+
+      // Polling for the operation status
+      let done = false;
+      let text = '';
+
+      while (!done) {
+        const statusResponse = await fetch(`/api/ocr-pdf-tiff?operationName=${operationName}&uniqueId=${uniqueId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const status = await statusResponse.json();
+
+        if (status.done) {
+          text = status.text;
+          done = true;
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before the next poll
+        }
+      }
+
+      setOcrResult(text);
     } else {
       console.error("Unsupported file type.");
     }
