@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         features: [{ type: google.cloud.vision.v1.Feature.Type.DOCUMENT_TEXT_DETECTION }],
         outputConfig: {
           gcsDestination: { uri: outputUri },
-          batchSize: 1,
+          batchSize: 11, // 11 pages per batch can be another number. The max is 2000
         },
       },
     ],
@@ -66,6 +66,10 @@ export async function GET(request: Request) {
     const [content] = await file.download();
     const jsonContent = JSON.parse(content.toString('utf-8'));
 
+    // Debugging log
+    console.log('jsonContent:', JSON.stringify(jsonContent, null, 2));
+
+    // Check and combine text from all pages
     const text = jsonContent.responses?.map((res: any) => res.fullTextAnnotation?.text).filter(Boolean).join("\n");
 
     return NextResponse.json({ done: true, text });
