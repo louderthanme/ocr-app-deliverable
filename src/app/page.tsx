@@ -11,8 +11,9 @@ import {
   useToast,
   Center,
   Flex,
-  Select,
+  IconButton,
 } from "@chakra-ui/react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -34,11 +35,6 @@ export default function Home() {
     setFile(selectedFile);
     setFileName(selectedFile ? selectedFile.name : "");
     setIsFileProcessed(false);
-  };
-
-  const handlePageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedPage = parseInt(event.target.value);
-    setPageNumber(selectedPage);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -105,7 +101,7 @@ export default function Home() {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-            }
+            },
           }
         );
 
@@ -136,13 +132,21 @@ export default function Home() {
     setIsFileProcessed(true);
   };
 
+  const goToPreviousPage = () => {
+    setPageNumber((prev) => Math.max(prev - 1, 1));
+  };
+
+  const goToNextPage = () => {
+    setPageNumber((prev) => Math.min(prev + 1, totalPages));
+  };
+
   return (
     <Box
       minH="100vh"
       display="flex"
       alignItems="center"
       justifyContent="center"
-      bg="red.50"
+      bg="pink.50"
     >
       <Box
         p={4}
@@ -173,20 +177,25 @@ export default function Home() {
             </Box>
             {totalPages > 1 && (
               <Flex justifyContent="center" mb={4}>
-                <Select
-                  value={pageNumber}
-                  onChange={handlePageChange}
-                  w="auto"
-                  bg="white"
-                >
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <option key={page} value={page}>
-                        Page {page}
-                      </option>
-                    )
-                  )}
-                </Select>
+                <IconButton
+                  bgColor="red.100"
+                  aria-label="Previous page"
+                  icon={<ChevronLeftIcon />}
+                  onClick={goToPreviousPage}
+                  isDisabled={pageNumber === 1}
+                  mr={2}
+                />
+                <Center>
+                  <Text>{`Page ${pageNumber} of ${totalPages}`}</Text>
+                </Center>
+                <IconButton
+                  bgColor="red.100"
+                  aria-label="Next page"
+                  icon={<ChevronRightIcon />}
+                  onClick={goToNextPage}
+                  isDisabled={pageNumber === totalPages}
+                  ml={2}
+                />
               </Flex>
             )}
           </>

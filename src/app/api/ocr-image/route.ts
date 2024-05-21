@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { Storage } from "@google-cloud/storage";
+import  reconstructText from "../../../utils/reconstructText";
 
 const storage = new Storage();
 const bucket = storage.bucket("documents-1533");
@@ -18,7 +19,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-
     const request = {
       image: {
         source: { imageUri: fileUrl },
@@ -27,13 +27,11 @@ export async function POST(req: NextRequest) {
       imageContext: { languageHints: ["en"] },
     };
 
-
     const [result] = await client.annotateImage(request);
-    const detections = result.textAnnotations;
+    const detections = result.fullTextAnnotation;
+    const text = detections ? reconstructText(detections) : '';
 
-    return NextResponse.json({
-      text: detections ? detections.map((d) => d.description).join("\n") : "",
-    });
+    return NextResponse.json({ text });
   } catch (error) {
     console.error("Error during OCR processing:", error);
     return NextResponse.json(
