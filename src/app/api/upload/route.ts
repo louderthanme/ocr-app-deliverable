@@ -4,7 +4,7 @@ import { Storage } from "@google-cloud/storage";
 const storage = new Storage();
 const bucket = storage.bucket("documents-1533"); // Use your actual bucket name
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     // Parse the file from the request
     const formData = await req.formData();

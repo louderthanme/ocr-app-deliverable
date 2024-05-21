@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { Storage } from "@google-cloud/storage";
-import  reconstructText from "../../../utils/reconstructText";
+import reconstructText from "@/utils/reconstructText";
 
 const storage = new Storage();
 const bucket = storage.bucket("documents-1533");
 
 const client = new ImageAnnotatorClient();
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     const { fileUrl } = await req.json();
 

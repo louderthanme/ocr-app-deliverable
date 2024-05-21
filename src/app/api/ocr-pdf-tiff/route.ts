@@ -7,7 +7,7 @@ import { google } from '@google-cloud/vision/build/protos/protos';
 const storage = new Storage();
 const client = new vision.ImageAnnotatorClient();
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   const { fileUrl, mimeType } = await request.json();
   const uniqueId = uuidv4();
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ operationName, uniqueId });
 }
 
-export async function GET(request: Request) {
+export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const operationName = searchParams.get('operationName');
   const uniqueId = searchParams.get('uniqueId');
