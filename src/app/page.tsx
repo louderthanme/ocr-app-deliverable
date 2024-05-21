@@ -1,22 +1,52 @@
-'use client';
-import { useState } from "react";
+"use client";
+import { useState, useRef } from "react";
+import {
+  Box,
+  VStack,
+  HStack,
+  Button,
+  Input,
+  Text,
+  Heading,
+  useToast,
+  Center,
+  Flex,
+} from "@chakra-ui/react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState<string>("");
   const [ocrResult, setOcrResult] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isFileProcessed, setIsFileProcessed] = useState<boolean>(false);
+  const toast = useToast();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleButtonClick = () => {
+    inputRef.current?.click();
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setFile(event.target.files[0]);
-    } else {
-      setFile(null);
-    }
+    const selectedFile = event.target.files?.[0] || null;
+    setFile(selectedFile);
+    setFileName(selectedFile ? selectedFile.name : "");
+    setIsFileProcessed(false);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!file) return;
+    if (!file) {
+      toast({
+        title: "No file selected",
+        description: "Please select a file to upload.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
+    setIsProcessing(true);
     const formData = new FormData();
     formData.append("file", file);
 
@@ -27,8 +57,10 @@ export default function Home() {
 
     const { fileUrl } = await uploadResponse.json();
 
-    const fileType = file.name.split('.').pop()?.toLowerCase();
-    const isImage = ["jpg", "jpeg", "png", "bmp", "gif", "webp"].includes(fileType || "");
+    const fileType = file.name.split(".").pop()?.toLowerCase();
+    const isImage = ["jpg", "jpeg", "png", "bmp", "gif", "webp"].includes(
+      fileType || ""
+    );
     const isPdfOrTiff = ["pdf", "tiff"].includes(fileType || "");
 
     if (isImage) {
@@ -55,15 +87,18 @@ export default function Home() {
 
       // Polling for the operation status
       let done = false;
-      let text = '';
+      let text = "";
 
       while (!done) {
-        const statusResponse = await fetch(`/api/ocr-pdf-tiff?operationName=${operationName}&uniqueId=${uniqueId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const statusResponse = await fetch(
+          `/api/ocr-pdf-tiff?operationName=${operationName}&uniqueId=${uniqueId}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         const status = await statusResponse.json();
 
@@ -71,29 +106,81 @@ export default function Home() {
           text = status.text;
           done = true;
         } else {
-          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before the next poll
+          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait for 5 seconds before the next poll
         }
       }
 
       setOcrResult(text);
     } else {
       console.error("Unsupported file type.");
+      toast({
+        title: "Unsupported file type",
+        description: "Please upload an image, PDF or TIFF file.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
+    setIsProcessing(false);
+    setIsFileProcessed(true);
   };
 
   return (
-    <div>
-      <h1>Upload a File for OCR</h1>
-      <form onSubmit={handleSubmit}>
-        <input type="file" onChange={handleFileChange} />
-        <button type="submit">Upload and Process</button>
-      </form>
-      {ocrResult && (
-        <div>
-          <h2>OCR Result</h2>
-          <p>{ocrResult}</p>
-        </div>
-      )}
-    </div>
+    <Box
+      minH="100vh"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      bg="red.50"
+    >
+      <Box p={4} bg="purple.300" borderRadius="md" boxShadow="md" maxW="md" w="full">
+        <Heading as="h1" size="lg" mb={4}>
+          <Center>Upload a File for OCR</Center>
+        </Heading>
+        {ocrResult && (
+          <Box mb={4} p={4} bg="gray.100" borderRadius="md" boxShadow="inner">
+            <Heading as="h2" size="md" mb={2}>
+              OCR Result
+            </Heading>
+            <Text whiteSpace="pre-wrap">
+              {ocrResult}
+            </Text>
+          </Box>
+        )}
+        <form onSubmit={handleSubmit}>
+          <VStack spacing={4} align="stretch">
+            <Flex align="center" width="100%" textAlign="center">
+              <Button onClick={handleButtonClick} colorScheme="yellow">
+                Choose File
+              </Button>
+              <Box
+                flex="1"
+                ml={3}
+                p={2}
+                bg={fileName ? "limegreen" : "white"}
+                color={fileName ? "white" : "black"}
+                borderRadius="md"
+              >
+                {fileName ? `${fileName} Selected` : "No File Selected"}
+              </Box>
+              <Input
+                type="file"
+                ref={inputRef}
+                hidden
+                onChange={handleFileChange}
+              />
+            </Flex>
+            <Button
+              type="submit"
+              colorScheme="cyan"
+              isLoading={isProcessing}
+              isDisabled={isFileProcessed}
+            >
+              {isFileProcessed ? "Select a New File" : "Upload and Process"}
+            </Button>
+          </VStack>
+        </form>
+      </Box>
+    </Box>
   );
 }
