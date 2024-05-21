@@ -133,18 +133,32 @@ export default function Home() {
       justifyContent="center"
       bg="red.50"
     >
-      <Box p={4} bg="purple.300" borderRadius="md" boxShadow="md" maxW="md" w="full">
+      <Box
+        p={4}
+        bg="purple.300"
+        borderRadius="md"
+        boxShadow="md"
+        maxW="3xl"
+        w="full"
+      >
         <Heading as="h1" size="lg" mb={4}>
           <Center>Upload a File for OCR</Center>
         </Heading>
         {ocrResult && (
-          <Box mb={4} p={4} bg="gray.100" borderRadius="md" boxShadow="inner">
+          <Box
+            mb={4}
+            p={4}
+            bg="gray.100"
+            borderRadius="md"
+            boxShadow="inner"
+            maxH="600px"
+            overflowY="auto"
+          >
+            {" "}
             <Heading as="h2" size="md" mb={2}>
               OCR Result
             </Heading>
-            <Text whiteSpace="pre-wrap">
-              {ocrResult}
-            </Text>
+            <Text whiteSpace="pre-wrap">{ocrResult}</Text>
           </Box>
         )}
         <form onSubmit={handleSubmit}>
@@ -172,7 +186,7 @@ export default function Home() {
             </Flex>
             <Button
               type="submit"
-              colorScheme="cyan"
+              colorScheme={isFileProcessed ? "red" : "cyan"}
               isLoading={isProcessing}
               isDisabled={isFileProcessed}
             >
