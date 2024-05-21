@@ -170,9 +170,14 @@ export default function Home() {
               maxH="400px"
               overflowY="auto"
             >
-              <Heading as="h2" size="md" mb={2}>
-                OCR Result
-              </Heading>
+   
+                <Center>
+                <Heading as="h2" size="md" mb={2}>
+                  OCR Result
+                </Heading>
+                </Center>
+
+       
               <Text whiteSpace="pre-wrap">{ocrResults[pageNumber - 1]}</Text>
             </Box>
             {totalPages > 1 && (
