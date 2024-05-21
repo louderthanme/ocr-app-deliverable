@@ -11,14 +11,17 @@ import {
   useToast,
   Center,
   Flex,
+  Select,
 } from "@chakra-ui/react";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>("");
-  const [ocrResult, setOcrResult] = useState<string>("");
+  const [ocrResults, setOcrResults] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isFileProcessed, setIsFileProcessed] = useState<boolean>(false);
+  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -31,6 +34,11 @@ export default function Home() {
     setFile(selectedFile);
     setFileName(selectedFile ? selectedFile.name : "");
     setIsFileProcessed(false);
+  };
+
+  const handlePageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedPage = parseInt(event.target.value);
+    setPageNumber(selectedPage);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -73,7 +81,8 @@ export default function Home() {
       });
 
       const { text } = await ocrResponse.json();
-      setOcrResult(text);
+      setOcrResults([text]);
+      setTotalPages(1);
     } else if (isPdfOrTiff) {
       const ocrResponse = await fetch("/api/ocr-pdf-tiff", {
         method: "POST",
@@ -87,7 +96,7 @@ export default function Home() {
 
       // Polling for the operation status
       let done = false;
-      let text = "";
+      let text = [];
 
       while (!done) {
         const statusResponse = await fetch(
@@ -96,7 +105,7 @@ export default function Home() {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-            },
+            }
           }
         );
 
@@ -110,7 +119,8 @@ export default function Home() {
         }
       }
 
-      setOcrResult(text);
+      setOcrResults(text);
+      setTotalPages(text.length);
     } else {
       console.error("Unsupported file type.");
       toast({
@@ -121,6 +131,7 @@ export default function Home() {
         isClosable: true,
       });
     }
+
     setIsProcessing(false);
     setIsFileProcessed(true);
   };
@@ -144,22 +155,41 @@ export default function Home() {
         <Heading as="h1" size="lg" mb={4}>
           <Center>Upload a File for OCR</Center>
         </Heading>
-        {ocrResult && (
-          <Box
-            mb={4}
-            p={4}
-            bg="gray.100"
-            borderRadius="md"
-            boxShadow="inner"
-            maxH="600px"
-            overflowY="auto"
-          >
-            {" "}
-            <Heading as="h2" size="md" mb={2}>
-              OCR Result
-            </Heading>
-            <Text whiteSpace="pre-wrap">{ocrResult}</Text>
-          </Box>
+        {ocrResults.length > 0 && (
+          <>
+            <Box
+              mb={4}
+              p={4}
+              bg="gray.100"
+              borderRadius="md"
+              boxShadow="inner"
+              maxH="400px"
+              overflowY="auto"
+            >
+              <Heading as="h2" size="md" mb={2}>
+                OCR Result
+              </Heading>
+              <Text whiteSpace="pre-wrap">{ocrResults[pageNumber - 1]}</Text>
+            </Box>
+            {totalPages > 1 && (
+              <Flex justifyContent="center" mb={4}>
+                <Select
+                  value={pageNumber}
+                  onChange={handlePageChange}
+                  w="auto"
+                  bg="white"
+                >
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <option key={page} value={page}>
+                        Page {page}
+                      </option>
+                    )
+                  )}
+                </Select>
+              </Flex>
+            )}
+          </>
         )}
         <form onSubmit={handleSubmit}>
           <VStack spacing={4} align="stretch">

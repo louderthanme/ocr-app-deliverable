@@ -69,10 +69,13 @@ export async function GET(request: Request) {
     // Debugging log
     console.log('jsonContent:', JSON.stringify(jsonContent, null, 2));
 
-    // Check and combine text from all pages
-    const text = jsonContent.responses?.map((res: any) => res.fullTextAnnotation?.text).filter(Boolean).join("\n");
+    // Extract and structure text from all pages
+    const textAnnotations = jsonContent.responses?.map((res: any) => res.fullTextAnnotation?.text).filter(Boolean);
 
-    return NextResponse.json({ done: true, text });
+    // Log the number of pages processed
+    console.log(`Number of pages processed: ${textAnnotations?.length}`);
+
+    return NextResponse.json({ done: true, text: textAnnotations, pages: textAnnotations?.length });
   } catch (error) {
     console.error('Error during OCR processing:', error);
     return NextResponse.json(
