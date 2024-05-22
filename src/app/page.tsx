@@ -12,10 +12,11 @@ import {
   Center,
   Flex,
   IconButton,
-} from "@chakra-ui/react";
+} from "@chakra-ui/react"; // Chakra UI for easy and quick styling
 import { ChevronLeftIcon, ChevronRightIcon } from "@chakra-ui/icons";
 
 export default function Home() {
+  // State variables to manage file, OCR results, and UI states
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [ocrResults, setOcrResults] = useState<string[]>([]);
@@ -26,10 +27,12 @@ export default function Home() {
   const toast = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Function to trigger file input click
   const handleButtonClick = () => {
     inputRef.current?.click();
   };
 
+  // Function to handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0] || null;
     setFile(selectedFile);
@@ -37,10 +40,11 @@ export default function Home() {
     setIsFileProcessed(false);
   };
 
+  // Function to handle form submission and process OCR
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!file) {
-      toast({
+      toast({ // Toast is from Chakra UI, it's a notification component
         title: "No file selected",
         description: "Please select a file to upload.",
         status: "error",
@@ -54,6 +58,7 @@ export default function Home() {
     const formData = new FormData();
     formData.append("file", file);
 
+    // Upload the file
     const uploadResponse = await fetch("/api/upload", {
       method: "POST",
       body: formData,
@@ -61,6 +66,7 @@ export default function Home() {
 
     const { fileUrl } = await uploadResponse.json();
 
+    // Determine the file type and process accordingly
     const fileType = file.name.split(".").pop()?.toLowerCase();
     const isImage = ["jpg", "jpeg", "png", "bmp", "gif", "webp"].includes(
       fileType || ""
@@ -68,6 +74,7 @@ export default function Home() {
     const isPdfOrTiff = ["pdf", "tiff"].includes(fileType || "");
 
     if (isImage) {
+      // Process image file
       const ocrResponse = await fetch("/api/ocr-image", {
         method: "POST",
         headers: {
@@ -80,6 +87,7 @@ export default function Home() {
       setOcrResults([text]);
       setTotalPages(1);
     } else if (isPdfOrTiff) {
+      // Process PDF/TIFF file
       const ocrResponse = await fetch("/api/ocr-pdf-tiff", {
         method: "POST",
         headers: {
@@ -111,7 +119,7 @@ export default function Home() {
           text = status.text;
           done = true;
         } else {
-          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait for 5 seconds before the next poll
+          await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait for 5 seconds before the next poll. We are polling waiting for the done:true response from the backend.
         }
       }
 
@@ -132,10 +140,12 @@ export default function Home() {
     setIsFileProcessed(true);
   };
 
+  // Function to navigate to the previous page
   const goToPreviousPage = () => {
     setPageNumber((prev) => Math.max(prev - 1, 1));
   };
 
+  // Function to navigate to the next page
   const goToNextPage = () => {
     setPageNumber((prev) => Math.min(prev + 1, totalPages));
   };
@@ -170,14 +180,11 @@ export default function Home() {
               maxH="400px"
               overflowY="auto"
             >
-   
-                <Center>
+              <Center>
                 <Heading as="h2" size="md" mb={2}>
                   OCR Result
                 </Heading>
-                </Center>
-
-       
+              </Center>
               <Text whiteSpace="pre-wrap">{ocrResults[pageNumber - 1]}</Text>
             </Box>
             {totalPages > 1 && (
@@ -215,7 +222,7 @@ export default function Home() {
                 flex="1"
                 ml={3}
                 p={2}
-                bg={fileName ? "limegreen" : "white"}
+                bg={fileName ? "limegreen" : "yellow.50"}
                 color={fileName ? "white" : "black"}
                 borderRadius="md"
               >
