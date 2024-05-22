@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ImageAnnotatorClient } from "@google-cloud/vision";
 import { Storage } from "@google-cloud/storage";
-import  reconstructText from "../../../utils/reconstructText";
+import reconstructText from "@/utils/reconstructText";
 
-const storage = new Storage();
+const googleCredentials = process.env.GOOGLE_CREDENTIALS;
+
+let storage: Storage;
+let visionClient: ImageAnnotatorClient;
+
+if (googleCredentials) {
+  try {
+    const decodedCredentials = Buffer.from(googleCredentials, 'base64').toString('utf8');
+    const credentials = JSON.parse(decodedCredentials);
+    storage = new Storage({ credentials });
+    visionClient = new ImageAnnotatorClient({ credentials });
+  } catch (error) {
+    console.error('Error decoding credentials:', error);
+    throw new Error('Error decoding Google Cloud credentials');
+  }
+} else {
+  // Handle missing credentials
+  console.error('Missing Google Cloud credentials');
+  throw new Error('Missing Google Cloud credentials');
+}
+
 const bucket = storage.bucket("documents-1533");
 
-const client = new ImageAnnotatorClient();
-
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     const { fileUrl } = await req.json();
 
@@ -27,9 +45,13 @@ export async function POST(req: NextRequest) {
       imageContext: { languageHints: ["en"] },
     };
 
-    const [result] = await client.annotateImage(request);
+    const [result] = await visionClient.annotateImage(request);
     const detections = result.fullTextAnnotation;
+    console.log("Detections:", detections); // Debugging log
+
+
     const text = detections ? reconstructText(detections) : '';
+    console.log("Text:", text); // Debugging log
 
     return NextResponse.json({ text });
   } catch (error) {

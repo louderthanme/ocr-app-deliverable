@@ -1,27 +1,45 @@
 import { NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { Storage } from '@google-cloud/storage';
-import vision from '@google-cloud/vision';
-import { google } from '@google-cloud/vision/build/protos/protos';
+import { ImageAnnotatorClient, protos } from '@google-cloud/vision';
+import reconstructText from '@/utils/reconstructText';
 
-const storage = new Storage();
-const client = new vision.ImageAnnotatorClient();
+const googleCredentials = process.env.GOOGLE_CREDENTIALS;
 
-export async function POST(request: Request) {
+let storage: Storage;
+let visionClient: ImageAnnotatorClient;
+
+if (googleCredentials) {
+  try {
+    const decodedCredentials = Buffer.from(googleCredentials, 'base64').toString('utf8');
+    const credentials = JSON.parse(decodedCredentials);
+    storage = new Storage({ credentials });
+    visionClient = new ImageAnnotatorClient({ credentials });
+  } catch (error) {
+    console.error('Error decoding credentials:', error);
+    throw new Error('Error decoding Google Cloud credentials');
+  }
+} else {
+  // Handle missing credentials
+  console.error('Missing Google Cloud credentials');
+  throw new Error('Missing Google Cloud credentials');
+}
+
+export async function POST(request: Request): Promise<Response> {
   const { fileUrl, mimeType } = await request.json();
   const uniqueId = uuidv4();
 
   const inputUri = fileUrl;
   const outputUri = `gs://documents-1533/output/output-${uniqueId}.json`;
 
-  const requestPayload: google.cloud.vision.v1.IAsyncBatchAnnotateFilesRequest = {
+  const requestPayload: protos.google.cloud.vision.v1.IAsyncBatchAnnotateFilesRequest = {
     requests: [
       {
         inputConfig: {
           gcsSource: { uri: inputUri },
           mimeType,
         },
-        features: [{ type: google.cloud.vision.v1.Feature.Type.DOCUMENT_TEXT_DETECTION }],
+        features: [{ type: protos.google.cloud.vision.v1.Feature.Type.DOCUMENT_TEXT_DETECTION }],
         outputConfig: {
           gcsDestination: { uri: outputUri },
           batchSize: 11, // 11 pages per batch can be another number. The max is 2000
@@ -30,13 +48,13 @@ export async function POST(request: Request) {
     ],
   };
 
-  const [operation] = await client.asyncBatchAnnotateFiles(requestPayload as any);
+  const [operation] = await visionClient.asyncBatchAnnotateFiles(requestPayload as any);
   const operationName = operation.name;
 
   return NextResponse.json({ operationName, uniqueId });
 }
 
-export async function GET(request: Request) {
+export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const operationName = searchParams.get('operationName');
   const uniqueId = searchParams.get('uniqueId');
@@ -45,8 +63,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid operation name or unique ID' }, { status: 400 });
   }
 
-  const getOperationRequest: google.longrunning.GetOperationRequest = { name: operationName, toJSON: () => ({ name: operationName }) };
-  const [operation] = await client.operationsClient.getOperation(getOperationRequest);
+  const getOperationRequest: protos.google.longrunning.GetOperationRequest = { name: operationName, toJSON: () => ({ name: operationName }) };
+  const [operation] = await visionClient.operationsClient.getOperation(getOperationRequest);
 
   if (!operation.done) {
     return NextResponse.json({ done: false });
@@ -70,7 +88,7 @@ export async function GET(request: Request) {
     console.log('jsonContent:', JSON.stringify(jsonContent, null, 2));
 
     // Extract and structure text from all pages
-    const textAnnotations = jsonContent.responses?.map((res: any) => res.fullTextAnnotation?.text).filter(Boolean);
+    const textAnnotations = jsonContent.responses?.map((res: any) => reconstructText(res.fullTextAnnotation)).filter(Boolean);
 
     // Log the number of pages processed
     console.log(`Number of pages processed: ${textAnnotations?.length}`);
