@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Storage } from "@google-cloud/storage";
 
-const storage = new Storage();
-const bucket = storage.bucket("documents-1533"); // Use your actual bucket name
+const googleCredentials = process.env.GOOGLE_CREDENTIALS;
+
+let storage: Storage;
+
+if (googleCredentials) {
+  try {
+    const decodedCredentials = Buffer.from(googleCredentials, 'base64').toString('utf8');
+    const credentials = JSON.parse(decodedCredentials);
+    storage = new Storage({ credentials });
+  } catch (error) {
+    console.error('Error decoding credentials:', error);
+    throw new Error('Error decoding Google Cloud credentials');
+  }
+} else {
+  // Handle missing credentials
+  console.error('Missing Google Cloud credentials');
+  throw new Error('Missing Google Cloud credentials');
+}
+
+const bucket = storage.bucket("documents-1533");
 
 export async function POST(req: NextRequest): Promise<Response> {
   try {
@@ -31,7 +49,6 @@ export async function POST(req: NextRequest): Promise<Response> {
 
       blobStream.on("finish", async () => {
         const fileUrl = `gs://${bucket.name}/${blob.name}`;
-        console.log('fileUrl:', fileUrl); // Debugging log
         resolve(
           NextResponse.json(
             {
