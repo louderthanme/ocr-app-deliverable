@@ -35,3 +35,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 ocr-app-423523-ad7dfbf19b09.json
+ocr-app-423523-ad7dfbf19b09.json.base64
